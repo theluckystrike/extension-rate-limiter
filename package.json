@@ -1,39 +1,42 @@
 {
-    "name": "extension-rate-limiter",
-    "version": "0.1.0",
-    "description": "API rate limiting for Chrome extensions — token bucket, sliding window, retry-after, queue, and per-domain throttling. Zero dependencies.",
-    "author": "Zovo <hello@zovo.one>",
-    "license": "MIT",
-    "keywords": [
-        "chrome-extension",
-        "rate-limiter",
-        "throttle",
-        "debounce",
-        "api-rate-limit",
-        "token-bucket",
-        "manifest-v3",
-        "browser-extension",
-        "retry",
-        "queue"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/theluckystrike/extension-rate-limiter.git"
-    },
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "files": [
-        "dist",
-        "README.md",
-        "LICENSE"
-    ],
-    "scripts": {
-        "build": "tsc",
-        "test": "jest",
-        "prepublishOnly": "npm run build"
-    },
-    "devDependencies": {
-        "@types/chrome": "^0.0.260",
-        "typescript": "^5.3.3"
-    }
+  "name": "extension-rate-limiter",
+  "version": "0.1.0",
+  "description": "API rate limiting for Chrome extensions \u2014 token bucket, sliding window, retry-after, queue, and per-domain throttling. Zero dependencies.",
+  "author": "Zovo <hello@zovo.one>",
+  "license": "MIT",
+  "keywords": [
+    "chrome-extension",
+    "rate-limiter",
+    "throttle",
+    "debounce",
+    "api-rate-limit",
+    "token-bucket",
+    "manifest-v3",
+    "browser-extension",
+    "retry",
+    "queue"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theluckystrike/extension-rate-limiter.git"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --passWithNoTests",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.260",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5.3.3"
+  }
 }
