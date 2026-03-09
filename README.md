@@ -15,6 +15,7 @@ API rate limiting for Chrome extensions — token bucket, sliding window, retry-
 
 - 🚀 **Sliding Window Rate Limiting** — Control request frequency with a configurable time window
 - 🪣 **Token Bucket Algorithm** — Gradual token refill for smooth rate limiting
+- 🌐 **Per-Origin Rate Limiting** — Separate limits for each domain/origin to respect individual API quotas
 - 📋 **Request Queue** — Automatically queue and process requests within rate limits
 - 🔒 **Zero Dependencies** — Lightweight, no external dependencies
 - 📦 **TypeScript Ready** — Full type definitions included
@@ -113,6 +114,150 @@ const result3 = await queue.add(() => fetch('/api/data3'));
 // Check queue status
 console.log(`Pending: ${queue.pending}`);
 console.log(`Remaining: ${queue.remaining}`);
+```
+
+### Per-Origin Rate Limiting
+
+Different APIs have different rate limits. Use per-origin limiters to manage multiple API endpoints simultaneously without one affecting another.
+
+```typescript
+import { RateLimiter } from 'extension-rate-limiter';
+
+// Create separate limiters for different origins
+const openAILimiter = new RateLimiter(50, 60000);   // 50 req/min for OpenAI
+const githubLimiter = new RateLimiter(5000, 60000);  // 5000 req/min for GitHub
+const customLimiter = new RateLimiter(10, 60000);    // 10 req/min for your API
+
+// Helper function to get the right limiter by origin
+function getLimiterForUrl(url: string): RateLimiter {
+  const origin = new URL(url).origin;
+  if (origin.includes('openai.com')) return openAILimiter;
+  if (origin.includes('github.com')) return githubLimiter;
+  return customLimiter;
+}
+
+// Use with any API call
+async function throttledFetch(url: string) {
+  const limiter = getLimiterForUrl(url);
+  return limiter.execute(() => fetch(url));
+}
+
+// Multiple origins handled independently
+await throttledFetch('https://api.openai.com/v1/models');
+await throttledFetch('https://api.github.com/user');
+```
+
+### Distributed Rate Limiting with chrome.storage
+
+For extensions with multiple contexts (background, popup, content scripts), synchronize rate limiting state using `chrome.storage`.
+
+```typescript
+import { RateLimiter } from 'extension-rate-limiter';
+
+class DistributedRateLimiter {
+  private limiter: RateLimiter;
+  private storageKey: string;
+
+  constructor(maxRequests: number, windowMs: number, storageKey: string) {
+    this.limiter = new RateLimiter(maxRequests, windowMs);
+    this.storageKey = storageKey;
+  }
+
+  // Sync state from storage
+  async syncFromStorage(): Promise<void> {
+    const data = await chrome.storage.local.get(this.storageKey);
+    if (data[this.storageKey]) {
+      // Restore timestamps from storage
+      this.limiter.reset();
+    }
+  }
+
+  // Persist state to storage
+  async syncToStorage(): Promise<void> {
+    // Store limiter state for other extension contexts
+    await chrome.storage.local.set({
+      [this.storageKey]: { lastSync: Date.now() }
+    });
+  }
+
+  async execute<T>(fn: () => Promise<T>): Promise<T> {
+    await this.syncFromStorage();
+    const result = await this.limiter.execute(async () => {
+      const value = await fn();
+      await this.syncToStorage();
+      return value;
+    });
+    return result;
+  }
+}
+
+// Usage across extension contexts
+const distributedLimiter = new DistributedRateLimiter(
+  10,    // 10 requests
+  60000, // per minute
+  'rate_limit_state'
+);
+```
+
+### Quota Sync with Response Headers
+
+Handle rate limit headers from API responses (`X-RateLimit-Remaining`, `Retry-After`) to dynamically adjust limits.
+
+```typescript
+import { RateLimiter } from 'extension-rate-limiter';
+
+interface RateLimitHeaders {
+  'x-ratelimit-limit'?: string;
+  'x-ratelimit-remaining'?: string;
+  'x-ratelimit-reset'?: string;
+  'retry-after'?: string;
+}
+
+class AdaptiveRateLimiter {
+  private limiter: RateLimiter;
+
+  constructor(maxRequests: number, windowMs: number) {
+    this.limiter = new RateLimiter(maxRequests, windowMs);
+  }
+
+  async executeWithRetry<T>(
+    url: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    return this.limiter.execute(async () => {
+      const response = await fetch(url, options);
+      
+      // Check for rate limit headers
+      const headers = response.headers as unknown as RateLimitHeaders;
+      
+      if (response.status === 429) {
+        // Too Many Requests - respect Retry-After
+        const retryAfter = parseInt(headers['retry-after'] || '60', 10);
+        console.log(`Rate limited. Retrying after ${retryAfter} seconds.`);
+        await new Promise(r => setTimeout(r, retryAfter * 1000));
+        return this.executeWithRetry(url, options);
+      }
+
+      // Update limiter based on response headers
+      if (headers['x-ratelimit-remaining']) {
+        const remaining = parseInt(headers['x-ratelimit-remaining'], 10);
+        if (remaining === 0) {
+          console.log('Rate limit reached according to server headers');
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return response.json();
+    });
+  }
+}
+
+// Usage
+const adaptiveLimiter = new AdaptiveRateLimiter(50, 60000);
+const data = await adaptiveLimiter.executeWithRetry('https://api.example.com/data');
 ```
 
 ## API Reference
