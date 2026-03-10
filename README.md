@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Last commit](https://img.shields.io/github/last-commit/theluckystrike/extension-rate-limiter/main)](https://github.com/theluckystrike/extension-rate-limiter/commits/main)
 [![GitHub stars](https://img.shields.io/github/stars/theluckystrike/extension-rate-limiter.svg)](https://github.com/theluckystrike/extension-rate-limiter/stargazers)
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/theluckystrike)](https://github.com/sponsors/theluckystrike)
 
 API rate limiting for Chrome extensions — token bucket, sliding window, retry-after, queue, and per-domain throttling. Zero dependencies.
 
